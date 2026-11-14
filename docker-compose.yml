@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payflow
+      POSTGRES_USER: payflow
+      POSTGRES_PASSWORD: payflow
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payflow"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: on-failure       # if the DB isn't reachable yet, retry instead of staying dead
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/payflow
+      DB_USER: payflow
+      DB_PASSWORD: payflow
+      JWT_SECRET: ${JWT_SECRET:-ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1wbGVhc2UtMzItYnl0ZXMtbWlu}
+      FRAUD_ENABLED: ${FRAUD_ENABLED:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@payflow.dev}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-PayFlow@Admin2026}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      OTP_SANDBOX_SHOW_CODE: ${OTP_SANDBOX_SHOW_CODE:-true}
+      HOLD_RELEASE_MINUTES: ${HOLD_RELEASE_MINUTES:-60}
+      ESCROW_REVIEW_MINUTES: ${ESCROW_REVIEW_MINUTES:-60}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      CORS_ORIGINS: http://localhost:3000
+    ports: ["8080:8080"]
+
+  frontend:
+    build: ./frontend
+    restart: on-failure
+    depends_on: [backend]
+    ports: ["3000:80"]
+
+volumes:
+  pgdata:

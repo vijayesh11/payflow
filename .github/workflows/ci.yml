@@ -1,0 +1,79 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend - build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build and run tests
+        working-directory: backend
+        run: mvn -B verify
+
+  frontend:
+    name: Frontend - build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+  # Continuous delivery: on every push to main (after tests pass), publish Docker images
+  # to GitHub Container Registry (ghcr.io/<your-username>/payflow-backend, payflow-frontend).
+  publish-images:
+    name: Publish Docker images
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Lowercase owner name
+        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/${{ env.OWNER }}/payflow-backend:latest,ghcr.io/${{ env.OWNER }}/payflow-backend:${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ env.OWNER }}/payflow-frontend:latest,ghcr.io/${{ env.OWNER }}/payflow-frontend:${{ github.sha }}
+
+  # Continuous deployment: after images are published, tell the hosting provider to redeploy.
+  # Add the deploy hook URL from your Render service as a repo secret named RENDER_DEPLOY_HOOK_URL.
+  deploy:
+    name: Deploy backend
+    needs: [publish-images]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "RENDER_DEPLOY_HOOK_URL not set - skipping deploy"; exit 0; fi
+          curl -fsS -X POST "$HOOK"

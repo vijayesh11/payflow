@@ -1,0 +1,95 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: payflow
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payflow}
+    username: ${DB_USER:payflow}
+    password: ${DB_PASSWORD:payflow}
+  # SMTP for OTP_DELIVERY=email: set SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD
+  mail:
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  jpa:
+    hibernate:
+      ddl-auto: update          # fine for a portfolio project; use Flyway migrations in production
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  # Base64-encoded, at least 32 bytes. ALWAYS override with the JWT_SECRET env var outside local dev.
+  secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1wbGVhc2UtMzItYnl0ZXMtbWlu}
+  expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}   # short-lived; the app refreshes it while the user is active
+
+app:
+  cors-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+  admin:
+    email: ${ADMIN_EMAIL:admin@payflow.dev}
+    password: ${ADMIN_PASSWORD:PayFlow@Admin2026}
+  security:
+    max-failed-logins: 5      # PCI-DSS 8.3.4 allows at most 10
+    lock-minutes: 30          # PCI-DSS 8.3.4: at least 30 minutes
+    pin-max-attempts: 3       # UPI-style: 3 wrong PINs lock the PIN
+    pin-lock-minutes: ${PIN_LOCK_MINUTES:1440}
+  otp:
+    delivery: ${OTP_DELIVERY:sandbox}                     # sandbox | email
+    sandbox-show-code: ${OTP_SANDBOX_SHOW_CODE:true}      # demo only: return the code to the app. Set false with real email
+    expiry-minutes: 5
+    max-attempts: 3
+    max-per-15-min: 8
+  mail:
+    from: ${MAIL_FROM:PayFlow <no-reply@payflow.dev>}
+  rate-limit:
+    per-minute: ${RATE_LIMIT_PER_MINUTE:60}     # per IP, on sign-in / sign-up / OTP / public pay
+  holds:
+    min-amount: ${HOLD_MIN_AMOUNT:2000}          # payments below this are never held
+    release-minutes: ${HOLD_RELEASE_MINUTES:60}  # real systems use days; short so a demo shows the release
+    check-interval-ms: 30000
+  escrow:
+    review-minutes: ${ESCROW_REVIEW_MINUTES:60}  # client's window to approve or dispute before auto-release
+  appeals:
+    sla-hours: ${APPEAL_SLA_HOURS:48}
+  fx:
+    fee-percent: 0.5                # our one visible fee
+    typical-markup-percent: 3.5     # for the comparison only: typical FX markup charged by big providers
+    typical-fee-percent: 4.4        # for the comparison only: typical cross-border receiving fee
+    quote-lock-minutes: 10
+  demo:
+    seed: ${DEMO_MODE:false}                     # true = create demo accounts and show them on the sign-in page
+    password: ${DEMO_PASSWORD:Demo@Pay2026}
+
+# Fraud rule engine — every threshold is configurable without code changes
+fraud:
+  enabled: ${FRAUD_ENABLED:true}
+  velocity:
+    max-transfers: 5          # max transfers per sender...
+    window-seconds: 60        # ...inside this sliding window
+  repeat-recipient:
+    max-transfers: 3          # max transfers to the SAME recipient...
+    window-seconds: 60        # ...inside this window
+  beneficiary:
+    blocked-threshold: 3      # recipient with this many blocked incoming transfers...
+    window-hours: 24          # ...in this window is treated as a mule account
+  threshold:
+    alert-amount: 5000        # above this: allow but raise a MEDIUM alert
+    block-amount: 10000       # above this: block
+  geo:
+    window-minutes: 30        # country change within this window = "impossible travel"
+  batch:
+    interval-ms: 30000        # how often the scheduled scan runs
+    window-minutes: 60
+    max-outflow: 8000         # total sent in window above this -> HIGH_OUTFLOW alert
+
+management:
+  health:
+    mail:
+      enabled: false          # don't mark the app DOWN if the email provider is briefly unreachable
+  endpoints:
+    web:
+      exposure:
+        include: health,info

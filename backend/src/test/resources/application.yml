@@ -1,0 +1,71 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:payflow;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+jwt:
+  secret: dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtMTIzNDU2
+  expiration-minutes: 15
+
+app:
+  cors-origins: http://localhost:5173
+  admin:
+    email: admin@payflow.dev
+    password: PayFlow@Admin2026
+  security:
+    max-failed-logins: 5
+    lock-minutes: 30
+    pin-max-attempts: 3
+    pin-lock-minutes: 1440
+  otp:
+    delivery: sandbox
+    sandbox-show-code: true
+    expiry-minutes: 5
+    max-attempts: 3
+    max-per-15-min: 20
+  mail:
+    from: test@payflow.dev
+  rate-limit:
+    per-minute: 10000
+  holds:
+    min-amount: 2000
+    release-minutes: 60
+    check-interval-ms: 3600000
+  escrow:
+    review-minutes: 60
+  appeals:
+    sla-hours: 48
+  fx:
+    fee-percent: 0.5
+    typical-markup-percent: 3.5
+    typical-fee-percent: 4.4
+    quote-lock-minutes: 10
+  demo:
+    seed: false
+    password: Demo@Pay2026
+
+fraud:
+  enabled: true
+  velocity:
+    max-transfers: 5
+    window-seconds: 60
+  repeat-recipient:
+    max-transfers: 3          # max transfers to the SAME recipient...
+    window-seconds: 60        # ...inside this window
+  beneficiary:
+    blocked-threshold: 3      # recipient with this many blocked incoming transfers...
+    window-hours: 24          # ...in this window is treated as a mule account
+  threshold:
+    alert-amount: 5000
+    block-amount: 10000
+  geo:
+    window-minutes: 30
+  batch:
+    interval-ms: 3600000
+    window-minutes: 60
+    max-outflow: 8000
