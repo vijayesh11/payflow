@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/vijayesh11/payflow/actions/workflows/ci.yml/badge.svg)
 
-**Live demo:** _add your deployed link here_
+**Live demo:** https://payflow-web-3odh.onrender.com
 
 PayFlow is a full-stack digital wallet and P2P payments platform built around one idea:
 **every risk decision should be explained, proportionate and appealable.**
