@@ -1,6 +1,6 @@
 # PayFlow — Digital Wallet & P2P Payment Platform
 
-![CI](https://github.com/YOUR_GITHUB_USERNAME/payflow/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/vijayesh11/payflow/actions/workflows/ci.yml/badge.svg)
 
 **Live demo:** _add your deployed link here_
 
