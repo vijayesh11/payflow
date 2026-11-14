@@ -5,6 +5,7 @@ services:
   - type: web
     name: payflow-api
     runtime: docker
+    region: singapore
     rootDir: backend
     plan: free
     healthCheckPath: /actuator/health
